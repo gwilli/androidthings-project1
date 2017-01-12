@@ -23,3 +23,42 @@ If you prefer to run on the command line, type
 ./gradlew installDebug
 adb shell am start com.example.androidthings.myproject/.MainActivity
 ```
+
+Wiring diagram
+==============
+
+Output (LED) circut
+```
+   o GPIO 17
+   |
+   Z
+   Z  220 Ohm
+   Z
+   |
+   V LED
+   -
+   |
+  --- Gnd
+   -
+```
+Input (button) circut
+```
+   o Vcc
+   |
+   Z
+   Z  10k Ohm
+   Z
+   |
+   o --- GPIO 19
+   |
+   |
+   o
+      |     momentary
+      |--| push button
+      |
+   o
+   |
+   |
+  --- Gnd
+   -
+```
