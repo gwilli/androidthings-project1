@@ -69,7 +69,7 @@ public class MainActivity extends Activity {
             @Override
             public void onClick(View view) {
                 try {
-                    //inputIO.setValue(!((ToggleButton)view).isChecked());
+                    //outputIO.setValue(!((ToggleButton)view).isChecked());
                     toggleLight();
                 } catch (IOException e) {
                     Log.e(TAG, "Unable to access GPIO on", e);
@@ -82,41 +82,43 @@ public class MainActivity extends Activity {
     private void setupGPIO() {
         PeripheralManagerService manager = new PeripheralManagerService();
         try {
-            inputIO = manager.openGpio(GPIO17_NAME);
+            outputIO = manager.openGpio(GPIO17_NAME);
 
-            inputIO.setDirection(Gpio.DIRECTION_OUT_INITIALLY_HIGH);
+            outputIO.setDirection(Gpio.DIRECTION_OUT_INITIALLY_LOW);
+            outputIO.setActiveType(Gpio.ACTIVE_HIGH);
+
+            inputIO = manager.openGpio(GPIO19_NAME);
+            inputIO.setDirection(Gpio.DIRECTION_IN);
             inputIO.setActiveType(Gpio.ACTIVE_LOW);
 
-            outputIO = manager.openGpio(GPIO19_NAME);
-            outputIO.setDirection(Gpio.DIRECTION_IN);
-            outputIO.setActiveType(Gpio.ACTIVE_LOW);
-
-            outputIO.setEdgeTriggerType(Gpio.EDGE_RISING);
-            outputIO.registerGpioCallback(new GpioCallback() {
-                @Override
-                public boolean onGpioEdge(Gpio gpio) {
-                    try {
-                        toggleLight();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    return true;
-                }
-
-                @Override
-                public void onGpioError(Gpio gpio, int error) {
-                    Log.e(TAG, gpio + ": Error event " + error);
-                }
-            });
+            inputIO.setEdgeTriggerType(Gpio.EDGE_FALLING);
+            inputIO.registerGpioCallback(buttonCallback);
 
         } catch (IOException e) {
             Log.e(TAG, "Unable to access GPIO", e);
         }
     }
 
+    private GpioCallback buttonCallback = new GpioCallback() {
+        @Override
+        public boolean onGpioEdge(Gpio gpio) {
+            try {
+                toggleLight();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return true;
+        }
+
+        @Override
+        public void onGpioError(Gpio gpio, int error) {
+            Log.e(TAG, gpio + ": Error event " + error);
+        }
+    };
+
     private void toggleLight() throws IOException{
-        inputIO.setValue(!inputIO.getValue());
-        button.setChecked(!inputIO.getValue());
+        outputIO.setValue(!outputIO.getValue());
+        button.setChecked(!outputIO.getValue());
     }
 
     @Override
@@ -124,19 +126,20 @@ public class MainActivity extends Activity {
         super.onDestroy();
         Log.d(TAG, "onDestroy");
 
-        if (inputIO != null) {
+        if (outputIO != null) {
             try {
-                inputIO.close();
-                inputIO = null;
+                outputIO.close();
+                outputIO = null;
             } catch (IOException e) {
                 Log.w(TAG, "Unable to close GPIO input", e);
             }
         }
 
-        if (outputIO != null) {
+        if (inputIO != null) {
+            inputIO.unregisterGpioCallback(buttonCallback);
             try {
-                outputIO.close();
-                outputIO = null;
+                inputIO.close();
+                inputIO = null;
             } catch (IOException e) {
                 Log.w(TAG, "Unable to close GPIO output", e);
             }
